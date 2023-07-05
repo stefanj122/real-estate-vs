@@ -18,16 +18,12 @@ export class RealEstateService {
   constructor(
     @InjectRepository(RealEstate)
     private readonly realEstateRepository: Repository<RealEstate>,
-    @InjectRepository(Image)
-    private readonly imageRepository: Repository<Image>,
   ) {}
 
   public async getRealEstate(
     id: number,
     user: JWTPayloadT,
-  ): Promise<{ realEstate: RealEstate; images: string[] }> {
-    const imagesPath = [];
-
+  ): Promise<{ realEstate: RealEstate }> {
     const realEstate = await this.realEstateRepository.findOne({
       where: {
         user: { id: user.id },
@@ -39,11 +35,11 @@ export class RealEstateService {
     if (!realEstate) {
       throw new NotFoundException(returnMessages.RealEstateNotFound);
     }
-    realEstate.images.forEach((image) => {
-      imagesPath.push(makeImageUrl(image, '285x190'));
+    realEstate.images.forEach((image: Image & { path: string }) => {
+      image.path = makeImageUrl(image, '285x190');
     });
 
-    return { realEstate, images: imagesPath };
+    return { realEstate };
   }
 
   public async createRealEstate(
@@ -86,36 +82,5 @@ export class RealEstateService {
     }
     realEstate = { ...realEstate, ...updateRealEstateDto };
     return await this.realEstateRepository.save(realEstate);
-  }
-
-  public async uploadImages(
-    id: number,
-    images: Express.Multer.File[],
-    user: JWTPayloadT,
-  ): Promise<{ realEstate: RealEstate; images: string[] }> {
-    const arrOfPromises = [];
-    const imagesPath = [];
-
-    const realEstate = await this.realEstateRepository.findOneBy({
-      id,
-      user: { id: user.id },
-    });
-    if (!realEstate) {
-      throw new NotFoundException(returnMessages.RealEstateNotFound);
-    }
-    images.forEach((image) => {
-      arrOfPromises.push(
-        this.imageRepository.save({
-          name: image.originalname,
-          realEstate: { id },
-        }),
-      );
-    });
-    return Promise.all(arrOfPromises).then((images: Image[]) => {
-      images.forEach((image) => {
-        imagesPath.push(makeImageUrl(image, '285x190'));
-      });
-      return { realEstate, images: imagesPath };
-    });
   }
 }

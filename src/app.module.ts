@@ -23,6 +23,7 @@ import { UserModule } from './user/user.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
+      renderPath: '*',
     }),
     UserModule,
     AuthModule,
